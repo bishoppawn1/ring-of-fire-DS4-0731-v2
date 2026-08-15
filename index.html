@@ -387,7 +387,8 @@ function waveBanner(title, sub){
 const ARENA = 1500;
 const ARENA_HALF = ARENA / 2;
 // World units visible horizontally at the camera (adapts zoom to window size)
-const VIEW_W = 860;
+const VIEW_W = 1300;
+const MAX_ZOOM = 1.0;
 
 // ---------- Floor themes ----------
 const THEMES = [
@@ -1546,7 +1547,7 @@ function closePause(){
 function render(g){
   const p = g.player;
   const theme = themeFor(g.floor);
-  const zoom = canvas.width / VIEW_W;
+  const zoom = Math.min(canvas.width / VIEW_W, MAX_ZOOM);
   const visW = canvas.width / zoom;
   const visH = canvas.height / zoom;
   const shakeAmt = g.shake * g.shake * 26;
