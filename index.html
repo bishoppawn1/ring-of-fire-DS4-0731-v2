@@ -152,6 +152,20 @@
     border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 10px;
     font-size: 14px; cursor: pointer; }
   #muteBtn:hover { border-color: var(--accent2); }
+  #helpBtn { position: fixed; bottom: 14px; left: 16px; z-index: 8; width: 32px; height: 32px;
+    background: rgba(0,0,0,0.4); border: 1px solid var(--line); color: var(--text); border-radius: 8px;
+    font-size: 17px; font-weight: 800; cursor: pointer; }
+  #helpBtn:hover { border-color: var(--accent2); }
+  #controlsBar { position: fixed; bottom: 14px; left: 58px; z-index: 8; display: flex; gap: 18px;
+    background: rgba(0,0,0,0.35); border: 1px solid var(--line); border-radius: 8px; padding: 6px 14px;
+    font-size: 12px; color: var(--dim); pointer-events: none; }
+  #controlsBar .cb { display: inline-flex; align-items: center; gap: 5px; }
+  #controlsBar kbd { font-size: 10px; }
+  .ctrl-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+  .ctrl-row:last-of-type { border-bottom: none; }
+  .ctrl-row span:first-child { color: var(--dim); }
+  .ctrl-row kbd { margin-right: 2px; }
 </style>
 </head>
 <body>
@@ -185,6 +199,22 @@
 <div id="toast" class="toast"></div>
 <div id="waveBanner"></div>
 <button id="muteBtn">🔊</button>
+<button id="helpBtn">?</button>
+<div id="controlsBar"><span class="cb"><kbd>WASD</kbd> Move</span><span class="cb"><kbd>SPACE</kbd> Dash</span><span class="cb"><kbd>ESC</kbd> Pause</span><span class="cb"><kbd>M</kbd> Mute</span></div>
+
+<!-- HELP -->
+<div class="overlay" id="helpOverlay">
+  <div class="panel" style="max-width:440px">
+    <h2>CONTROLS</h2>
+    <div class="ctrl-row"><span>Move</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrow keys</span></div>
+    <div class="ctrl-row"><span>Dash (invulnerable)</span><span><kbd>SPACE</kbd> / <kbd>SHIFT</kbd></span></div>
+    <div class="ctrl-row"><span>Pause</span><span><kbd>ESC</kbd></span></div>
+    <div class="ctrl-row"><span>Mute / unmute</span><span><kbd>M</kbd></span></div>
+    <div class="ctrl-row"><span>Help</span><span><kbd>H</kbd></span></div>
+    <div class="sub" style="margin-top:14px;margin-bottom:6px">Your weapon <b>auto-aims and auto-fires</b> — just move and dash.</div>
+    <button class="btn" id="helpClose" style="width:100%">Close</button>
+  </div>
+</div>
 
 <!-- NEW GAME -->
 <div class="overlay show" id="menuOverlay">
@@ -369,6 +399,82 @@ const THEMES = [
 ];
 function themeFor(floor){ return THEMES[(floor-1) % THEMES.length]; }
 
+// ---------- Floor background (pre-rendered for a sense of place) ----------
+let floorCanvas = null, floorCanvasTheme = null;
+function buildFloor(theme){
+  const c = document.createElement('canvas');
+  c.width = ARENA; c.height = ARENA;
+  const g = c.getContext('2d');
+  g.fillStyle = theme.bg;
+  g.fillRect(0, 0, ARENA, ARENA);
+
+  // subtle radial light from center
+  const rg = g.createRadialGradient(ARENA/2, ARENA/2, 0, ARENA/2, ARENA/2, ARENA*0.7);
+  rg.addColorStop(0, 'rgba(255,255,255,0.05)');
+  rg.addColorStop(1, 'rgba(0,0,0,0.25)');
+  g.fillStyle = rg;
+  g.fillRect(0, 0, ARENA, ARENA);
+
+  // grid
+  g.strokeStyle = theme.grid;
+  g.lineWidth = 1;
+  const gs = 80;
+  for (let x = 0; x <= ARENA; x += gs){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,ARENA); g.stroke(); }
+  for (let y = 0; y <= ARENA; y += gs){ g.beginPath(); g.moveTo(0,y); g.lineTo(ARENA,y); g.stroke(); }
+
+  // scattered decorative marks (rocks, cracks, scorch patches) - seeded for consistency
+  let seed = 12345;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < 90; i++){
+    const x = rnd()*ARENA, y = rnd()*ARENA;
+    const kind = rnd();
+    if (kind < 0.4){
+      // rock
+      g.fillStyle = 'rgba(255,255,255,0.03)';
+      g.beginPath(); g.arc(x, y, 3 + rnd()*8, 0, TAU); g.fill();
+    } else if (kind < 0.7){
+      // crack
+      g.strokeStyle = 'rgba(0,0,0,0.25)';
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x, y);
+      let cx = x, cy = y, a = rnd()*TAU;
+      for (let s = 0; s < 4; s++){ cx += Math.cos(a)*12; cy += Math.sin(a)*12; g.lineTo(cx, cy); a += (rnd()-0.5)*1.2; }
+      g.stroke();
+    } else {
+      // scorch patch
+      g.fillStyle = 'rgba(0,0,0,0.10)';
+      g.beginPath(); g.arc(x, y, 6 + rnd()*14, 0, TAU); g.fill();
+    }
+  }
+
+  // center emblem - orients the player
+  const cx = ARENA/2, cy = ARENA/2;
+  g.strokeStyle = theme.wall;
+  g.globalAlpha = 0.5;
+  g.lineWidth = 2;
+  g.beginPath(); g.arc(cx, cy, 60, 0, TAU); g.stroke();
+  g.beginPath(); g.arc(cx, cy, 90, 0, TAU); g.stroke();
+  g.globalAlpha = 0.35;
+  g.beginPath(); g.moveTo(cx-110, cy); g.lineTo(cx+110, cy); g.stroke();
+  g.beginPath(); g.moveTo(cx, cy-110); g.lineTo(cx, cy+110); g.stroke();
+  g.globalAlpha = 1;
+
+  // edge vignette near walls
+  const eg = g.createRadialGradient(cx, cy, ARENA*0.45, cx, cy, ARENA*0.72);
+  eg.addColorStop(0, 'rgba(0,0,0,0)');
+  eg.addColorStop(1, 'rgba(0,0,0,0.35)');
+  g.fillStyle = eg;
+  g.fillRect(0, 0, ARENA, ARENA);
+
+  return c;
+}
+function ensureFloor(theme){
+  if (!floorCanvas || floorCanvasTheme !== theme){
+    floorCanvas = buildFloor(theme);
+    floorCanvasTheme = theme;
+  }
+}
+
 // ---------- Difficulty ----------
 const DIFFICULTIES = [
   { id:'casual', name:'Casual', dmg:0.7, hp:0.8, count:0.75, money:1.25, desc:'Relaxed pressure, more gold.' },
@@ -497,8 +603,14 @@ function newGame(charId, diffId){
     shopRefreshCost: 50, turretCount: 0,
     shake: 0, freeze: 0, combo: 0, comboTimer: 0, hurtFlash: 0,
     camera: {x:0, y:0},
+    motes: [],
   };
+  for (let i = 0; i < 60; i++){
+    g.motes.push({ x: rand(-ARENA_HALF, ARENA_HALF), y: rand(-ARENA_HALF, ARENA_HALF),
+      vx: rand(-10, 10), vy: rand(-10, 10), r: rand(1, 2.5), a: rand(0.08, 0.3) });
+  }
   game = g;
+  setControlsVisible(true);
   startWave(g);
   updateHUD();
 }
@@ -1366,6 +1478,7 @@ function gameOver(g){
   if (isBest) $('bestRun').textContent = '🏆 NEW BEST RUN!';
   SND.death();
   g.shake = 1;
+  setControlsVisible(false);
   setTimeout(() => $('deathOverlay').classList.add('show'), 700);
 }
 
@@ -1401,10 +1514,22 @@ window.addEventListener('keydown', e => {
   initAudio();
   if (e.code === 'Escape' && game && game.state === 'running') openPause();
   if (e.code === 'KeyM'){ muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; }
+  if (e.code === 'KeyH') toggleHelp();
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 $('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; initAudio(); };
+$('helpBtn').onclick = toggleHelp;
+$('helpClose').onclick = toggleHelp;
+
+function toggleHelp(){
+  const o = $('helpOverlay');
+  const showing = o.classList.toggle('show');
+  initAudio();
+  if (showing && game) game.state = 'paused';
+  else if (!showing && game && game.state === 'paused' && !$('pauseOverlay').classList.contains('show')) game.state = 'running';
+}
+function setControlsVisible(v){ $('controlsBar').style.display = v ? 'flex' : 'none'; }
 
 function openPause(){
   game.state = 'paused';
@@ -1437,16 +1562,15 @@ function render(g){
   ctx.scale(zoom, zoom);
   ctx.translate(-p.x + (Math.random()-0.5)*shakeAmt, -p.y + (Math.random()-0.5)*shakeAmt);
 
-  // grid
-  ctx.strokeStyle = theme.grid;
-  ctx.lineWidth = 1 / zoom;
-  const gridSize = 80;
-  const startX = Math.floor(camX / gridSize) * gridSize;
-  const startY = Math.floor(camY / gridSize) * gridSize;
-  ctx.beginPath();
-  for (let x = startX; x < camX + visW + gridSize; x += gridSize){ ctx.moveTo(x, camY); ctx.lineTo(x, camY + visH); }
-  for (let y = startY; y < camY + visH + gridSize; y += gridSize){ ctx.moveTo(camX, y); ctx.lineTo(camX + visW, y); }
-  ctx.stroke();
+  // pre-rendered floor (grid + landmarks + center emblem) for a sense of place
+  ensureFloor(theme);
+  ctx.drawImage(floorCanvas, -ARENA_HALF, -ARENA_HALF);
+
+  // ambient dust motes
+  for (const m of g.motes){
+    ctx.fillStyle = `rgba(255,255,255,${m.a})`;
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, TAU); ctx.fill();
+  }
 
   // arena boundary
   ctx.strokeStyle = theme.wallGlow; ctx.lineWidth = 16; ctx.strokeRect(-ARENA_HALF, -ARENA_HALF, ARENA, ARENA);
@@ -1719,6 +1843,12 @@ function loop(t){
       // shake decay
       game.shake = Math.max(0, game.shake - dt * 2.5);
       game.hurtFlash = Math.max(0, game.hurtFlash - dt * 2);
+      // ambient motes
+      for (const m of game.motes){
+        m.x += m.vx * dt; m.y += m.vy * dt;
+        if (m.x > ARENA_HALF) m.x = -ARENA_HALF; else if (m.x < -ARENA_HALF) m.x = ARENA_HALF;
+        if (m.y > ARENA_HALF) m.y = -ARENA_HALF; else if (m.y < -ARENA_HALF) m.y = ARENA_HALF;
+      }
       updateHUD();
     }
   }
