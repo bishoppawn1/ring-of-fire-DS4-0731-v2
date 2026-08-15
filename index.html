@@ -71,6 +71,10 @@
   .panel h2 { font-size: 20px; margin-bottom: 14px; color: var(--accent2); letter-spacing: 1px; }
   .panel .sub { color: var(--dim); margin-bottom: 20px; font-size: 13px; }
   .title-accent { color: var(--accent); }
+  .build-tag { display: inline-block; font-size: 11px; letter-spacing: 2px; color: var(--dim);
+    background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 6px;
+    padding: 3px 10px; margin-bottom: 16px; }
+  .build-tag span { color: var(--accent2); font-weight: 800; }
 
   .grid { display: grid; gap: 12px; }
   .chars { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
@@ -223,6 +227,7 @@
   <div class="panel">
     <h1>RING <span class="title-accent">OF</span> FIRE</h1>
     <div class="sub">Endless arena survival. Move, dash, and let your weapon fight for you.</div>
+    <div class="build-tag">BUILD <span id="buildNum"></span></div>
     <h2>Choose Character</h2>
     <div class="grid chars" id="charGrid"></div>
     <h2 style="margin-top:20px">Choose Difficulty</h2>
@@ -285,6 +290,9 @@
 /* ============================================================
    RING OF FIRE  -  self-contained HTML5 arena survival game
    ============================================================ */
+
+// ---------- Build number (increment on each release) ----------
+const BUILD = 7;
 
 // ---------- Canvas ----------
 const canvas = document.getElementById('game');
@@ -2003,6 +2011,7 @@ requestAnimationFrame(loop);
 
 // ---------- Menu setup ----------
 function buildMenu(){
+  $('buildNum').textContent = BUILD;
   const cg = $('charGrid');
   cg.innerHTML = '';
   let selChar = CHARACTERS[0].id;
