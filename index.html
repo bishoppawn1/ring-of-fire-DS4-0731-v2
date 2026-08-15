@@ -354,8 +354,10 @@ function waveBanner(title, sub){
 }
 
 // ---------- Arena ----------
-const ARENA = 2200;
+const ARENA = 1500;
 const ARENA_HALF = ARENA / 2;
+// World units visible horizontally at the camera (adapts zoom to window size)
+const VIEW_W = 860;
 
 // ---------- Floor themes ----------
 const THEMES = [
@@ -949,6 +951,10 @@ function nearestEnemy(g, x, y, maxR){
     const dd = dist2(e.x, e.y, x, y);
     if (dd < bd){ bd = dd; best = e; }
   }
+  if (g.boss){
+    const dd = dist2(g.boss.x, g.boss.y, x, y);
+    if (dd < bd){ bd = dd; best = g.boss; }
+  }
   return best;
 }
 
@@ -1052,8 +1058,9 @@ function updatePlayer(g, dt){
   p.dashCd -= dt;
   if (p.invuln > 0) p.invuln -= dt;
   if ((keys['Space'] || keys['ShiftLeft'] || keys['ShiftRight']) && p.dashCd <= 0 && p.dashTime <= 0){
-    const dirX = mx || Math.cos(p.lastAim || 0);
-    const dirY = my || Math.sin(p.lastAim || 0);
+    let dirX, dirY;
+    if (ml > 0){ dirX = mx; dirY = my; }
+    else { const a = p.lastAim || 0; dirX = Math.cos(a); dirY = Math.sin(a); }
     const dl = Math.hypot(dirX, dirY) || 1;
     p.dashDir = { x: dirX/dl, y: dirY/dl };
     p.dashTime = 0.16;
@@ -1414,26 +1421,31 @@ function closePause(){
 function render(g){
   const p = g.player;
   const theme = themeFor(g.floor);
+  const zoom = canvas.width / VIEW_W;
+  const visW = canvas.width / zoom;
+  const visH = canvas.height / zoom;
   const shakeAmt = g.shake * g.shake * 26;
-  const camX = p.x - canvas.width/2 + (Math.random()-0.5)*shakeAmt;
-  const camY = p.y - canvas.height/2 + (Math.random()-0.5)*shakeAmt;
+  const camX = p.x - visW/2 + (Math.random()-0.5)*shakeAmt;
+  const camY = p.y - visH/2 + (Math.random()-0.5)*shakeAmt;
   g.camera.x = camX; g.camera.y = camY;
 
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();
-  ctx.translate(-camX, -camY);
+  ctx.translate(canvas.width/2, canvas.height/2);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-p.x + (Math.random()-0.5)*shakeAmt, -p.y + (Math.random()-0.5)*shakeAmt);
 
   // grid
   ctx.strokeStyle = theme.grid;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1 / zoom;
   const gridSize = 80;
   const startX = Math.floor(camX / gridSize) * gridSize;
   const startY = Math.floor(camY / gridSize) * gridSize;
   ctx.beginPath();
-  for (let x = startX; x < camX + canvas.width + gridSize; x += gridSize){ ctx.moveTo(x, camY); ctx.lineTo(x, camY + canvas.height); }
-  for (let y = startY; y < camY + canvas.height + gridSize; y += gridSize){ ctx.moveTo(camX, y); ctx.lineTo(camX + canvas.width, y); }
+  for (let x = startX; x < camX + visW + gridSize; x += gridSize){ ctx.moveTo(x, camY); ctx.lineTo(x, camY + visH); }
+  for (let y = startY; y < camY + visH + gridSize; y += gridSize){ ctx.moveTo(camX, y); ctx.lineTo(camX + visW, y); }
   ctx.stroke();
 
   // arena boundary
