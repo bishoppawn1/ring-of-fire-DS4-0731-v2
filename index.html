@@ -292,7 +292,7 @@
    ============================================================ */
 
 // ---------- Build number (increment on each release) ----------
-const BUILD = 8;
+const BUILD = 9;
 
 // ---------- Canvas ----------
 const canvas = document.getElementById('game');
@@ -407,8 +407,10 @@ function waveBanner(title, sub){
 }
 
 // ---------- Arena ----------
-const ARENA = 1200;
-const ARENA_HALF = ARENA / 2;
+const ARENA_W = 1500;
+const ARENA_H = 1300;
+const ARENA_HALF_W = ARENA_W / 2;
+const ARENA_HALF_H = ARENA_H / 2;
 // World units visible horizontally at the camera (adapts zoom to window size)
 const VIEW_W = 1300;
 const MAX_ZOOM = 1.0;
@@ -427,30 +429,30 @@ function themeFor(floor){ return THEMES[(floor-1) % THEMES.length]; }
 let floorCanvas = null, floorCanvasTheme = null;
 function buildFloor(theme){
   const c = document.createElement('canvas');
-  c.width = ARENA; c.height = ARENA;
+  c.width = ARENA_W; c.height = ARENA_H;
   const g = c.getContext('2d');
   g.fillStyle = theme.bg;
-  g.fillRect(0, 0, ARENA, ARENA);
+  g.fillRect(0, 0, ARENA_W, ARENA_H);
 
   // subtle radial light from center
-  const rg = g.createRadialGradient(ARENA/2, ARENA/2, 0, ARENA/2, ARENA/2, ARENA*0.7);
+  const rg = g.createRadialGradient(ARENA_W/2, ARENA_H/2, 0, ARENA_W/2, ARENA_H/2, ARENA_W*0.7);
   rg.addColorStop(0, 'rgba(255,255,255,0.05)');
   rg.addColorStop(1, 'rgba(0,0,0,0.25)');
   g.fillStyle = rg;
-  g.fillRect(0, 0, ARENA, ARENA);
+  g.fillRect(0, 0, ARENA_W, ARENA_H);
 
   // grid
   g.strokeStyle = theme.grid;
   g.lineWidth = 1;
   const gs = 80;
-  for (let x = 0; x <= ARENA; x += gs){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,ARENA); g.stroke(); }
-  for (let y = 0; y <= ARENA; y += gs){ g.beginPath(); g.moveTo(0,y); g.lineTo(ARENA,y); g.stroke(); }
+  for (let x = 0; x <= ARENA_W; x += gs){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,ARENA_H); g.stroke(); }
+  for (let y = 0; y <= ARENA_H; y += gs){ g.beginPath(); g.moveTo(0,y); g.lineTo(ARENA_W,y); g.stroke(); }
 
   // scattered decorative marks (rocks, cracks, scorch patches) - seeded for consistency
   let seed = 12345;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   for (let i = 0; i < 90; i++){
-    const x = rnd()*ARENA, y = rnd()*ARENA;
+    const x = rnd()*ARENA_W, y = rnd()*ARENA_H;
     const kind = rnd();
     if (kind < 0.4){
       // rock
@@ -472,7 +474,7 @@ function buildFloor(theme){
   }
 
   // center emblem - orients the player
-  const cx = ARENA/2, cy = ARENA/2;
+  const cx = ARENA_W/2, cy = ARENA_H/2;
   g.strokeStyle = theme.wall;
   g.globalAlpha = 0.5;
   g.lineWidth = 2;
@@ -484,11 +486,11 @@ function buildFloor(theme){
   g.globalAlpha = 1;
 
   // edge vignette near walls
-  const eg = g.createRadialGradient(cx, cy, ARENA*0.45, cx, cy, ARENA*0.72);
+  const eg = g.createRadialGradient(cx, cy, ARENA_W*0.45, cx, cy, ARENA_W*0.72);
   eg.addColorStop(0, 'rgba(0,0,0,0)');
   eg.addColorStop(1, 'rgba(0,0,0,0.35)');
   g.fillStyle = eg;
-  g.fillRect(0, 0, ARENA, ARENA);
+  g.fillRect(0, 0, ARENA_W, ARENA_H);
 
   return c;
 }
@@ -630,11 +632,11 @@ function newGame(charId, diffId){
     motes: [], embers: [],
   };
   for (let i = 0; i < 60; i++){
-    g.motes.push({ x: rand(-ARENA_HALF, ARENA_HALF), y: rand(-ARENA_HALF, ARENA_HALF),
+    g.motes.push({ x: rand(-ARENA_HALF_W, ARENA_HALF_W), y: rand(-ARENA_HALF_H, ARENA_HALF_H),
       vx: rand(-10, 10), vy: rand(-10, 10), r: rand(1, 2.5), a: rand(0.08, 0.3) });
   }
   for (let i = 0; i < 40; i++){
-    g.embers.push({ x: rand(-ARENA_HALF, ARENA_HALF), y: rand(-ARENA_HALF, ARENA_HALF),
+    g.embers.push({ x: rand(-ARENA_HALF_W, ARENA_HALF_W), y: rand(-ARENA_HALF_H, ARENA_HALF_H),
       vx: rand(-8, 8), vy: rand(-26, -10), r: rand(1, 3), a: rand(0.1, 0.4), t: rand(0, TAU) });
   }
   game = g;
@@ -715,10 +717,10 @@ function spawnEnemy(g, def){
   const side = randi(0, 3);
   const m = 60;
   let x, y;
-  if (side === 0){ x = rand(-ARENA_HALF+m, ARENA_HALF-m); y = -ARENA_HALF - m; }
-  else if (side === 1){ x = rand(-ARENA_HALF+m, ARENA_HALF-m); y = ARENA_HALF + m; }
-  else if (side === 2){ x = -ARENA_HALF - m; y = rand(-ARENA_HALF+m, ARENA_HALF-m); }
-  else { x = ARENA_HALF + m; y = rand(-ARENA_HALF+m, ARENA_HALF-m); }
+  if (side === 0){ x = rand(-ARENA_HALF_W+m, ARENA_HALF_W-m); y = -ARENA_HALF_H - m; }
+  else if (side === 1){ x = rand(-ARENA_HALF_W+m, ARENA_HALF_W-m); y = ARENA_HALF_H + m; }
+  else if (side === 2){ x = -ARENA_HALF_W - m; y = rand(-ARENA_HALF_H+m, ARENA_HALF_H-m); }
+  else { x = ARENA_HALF_W + m; y = rand(-ARENA_HALF_H+m, ARENA_HALF_H-m); }
   const hp = def.hp * enemyHpMult(g.floor, g.diff);
   const dmg = def.dmg * enemyDmgMult(g.floor, g.diff);
   const e = {
@@ -794,8 +796,8 @@ function updateEnemies(g, dt){
       e.vy = lerp(e.vy, my*e.speed, dt*2);
     }
     e.x += e.vx*dt; e.y += e.vy*dt;
-    e.x = clamp(e.x, -ARENA_HALF+20, ARENA_HALF-20);
-    e.y = clamp(e.y, -ARENA_HALF+20, ARENA_HALF-20);
+    e.x = clamp(e.x, -ARENA_HALF_W+20, ARENA_HALF_W-20);
+    e.y = clamp(e.y, -ARENA_HALF_H+20, ARENA_HALF_H-20);
 
     if (e.shield){ e.shieldT -= dt; if (e.shieldT <= 0) e.shield = false; }
 
@@ -876,8 +878,8 @@ function updateBoss(g, dt){
   if (d < want - 40) { mx = -nx; my = -ny; }
   else if (d > want + 60) { mx = nx; my = ny; }
   b.x += mx * b.speed * dt; b.y += my * b.speed * dt;
-  b.x = clamp(b.x, -ARENA_HALF+40, ARENA_HALF-40);
-  b.y = clamp(b.y, -ARENA_HALF+40, ARENA_HALF-40);
+  b.x = clamp(b.x, -ARENA_HALF_W+40, ARENA_HALF_W-40);
+  b.y = clamp(b.y, -ARENA_HALF_H+40, ARENA_HALF_H-40);
   b.fireCd -= dt;
   if (b.fireCd <= 0){
     b.fireCd = b.superBoss ? rand(0.7, 1.2) : rand(1.4, 2.2);
@@ -965,7 +967,7 @@ function updateEnemyBullets(g, dt){
       b.vx = Math.cos(a)*sp; b.vy = Math.sin(a)*sp;
     }
     b.x += b.vx * dt; b.y += b.vy * dt;
-    if (Math.abs(b.x) > ARENA_HALF || Math.abs(b.y) > ARENA_HALF || b.life <= 0){
+    if (Math.abs(b.x) > ARENA_HALF_W || Math.abs(b.y) > ARENA_HALF_H || b.life <= 0){
       g.enemyBullets.splice(i, 1); continue;
     }
     if (dist2(b.x, b.y, p.x, p.y) < (b.r + p.r) * (b.r + p.r) && p.invuln <= 0){
@@ -995,7 +997,7 @@ function updatePlayerBullets(g, dt){
       }
     }
     b.x += b.vx*dt; b.y += b.vy*dt;
-    if (Math.abs(b.x) > ARENA_HALF || Math.abs(b.y) > ARENA_HALF || b.life <= 0){
+    if (Math.abs(b.x) > ARENA_HALF_W || Math.abs(b.y) > ARENA_HALF_H || b.life <= 0){
       g.bullets.splice(i, 1); continue;
     }
     let hitSomething = false;
@@ -1195,8 +1197,8 @@ function updatePlayer(g, dt){
     p.x += mx * speed * dt;
     p.y += my * speed * dt;
   }
-  p.x = clamp(p.x, -ARENA_HALF+16, ARENA_HALF-16);
-  p.y = clamp(p.y, -ARENA_HALF+16, ARENA_HALF-16);
+  p.x = clamp(p.x, -ARENA_HALF_W+16, ARENA_HALF_W-16);
+  p.y = clamp(p.y, -ARENA_HALF_H+16, ARENA_HALF_H-16);
   for (let i = p.trail.length - 1; i >= 0; i--){ p.trail[i].life -= dt; if (p.trail[i].life <= 0) p.trail.splice(i,1); }
 
   p.dashCd -= dt;
@@ -1233,8 +1235,8 @@ function updatePlayer(g, dt){
 
 // ---------- Turrets ----------
 function spawnTurret(g){
-  const x = rand(-ARENA_HALF+80, ARENA_HALF-80);
-  const y = rand(-ARENA_HALF+80, ARENA_HALF-80);
+  const x = rand(-ARENA_HALF_W+80, ARENA_HALF_W-80);
+  const y = rand(-ARENA_HALF_H+80, ARENA_HALF_H-80);
   g.turrets.push({ x, y, angle: 0, fireCd: 0, dmg: 10, fireRate: 2.2, range: 340 });
   g.turretCount++;
   toast('🔩 Turret deployed', false);
@@ -1242,8 +1244,8 @@ function spawnTurret(g){
 }
 function relocateTurrets(g){
   for (const t of g.turrets){
-    t.x = rand(-ARENA_HALF+80, ARENA_HALF-80);
-    t.y = rand(-ARENA_HALF+80, ARENA_HALF-80);
+    t.x = rand(-ARENA_HALF_W+80, ARENA_HALF_W-80);
+    t.y = rand(-ARENA_HALF_H+80, ARENA_HALF_H-80);
   }
 }
 function updateTurrets(g, dt){
@@ -1602,7 +1604,7 @@ function render(g){
 
   // pre-rendered floor (grid + landmarks + center emblem) for a sense of place
   ensureFloor(theme);
-  ctx.drawImage(floorCanvas, -ARENA_HALF, -ARENA_HALF);
+  ctx.drawImage(floorCanvas, -ARENA_HALF_W, -ARENA_HALF_H);
 
   // ambient dust motes
   for (const m of g.motes){
@@ -1620,8 +1622,8 @@ function render(g){
   ctx.globalCompositeOperation = 'source-over';
 
   // arena boundary
-  ctx.strokeStyle = theme.wallGlow; ctx.lineWidth = 16; ctx.strokeRect(-ARENA_HALF, -ARENA_HALF, ARENA, ARENA);
-  ctx.strokeStyle = theme.wall; ctx.lineWidth = 5; ctx.strokeRect(-ARENA_HALF, -ARENA_HALF, ARENA, ARENA);
+  ctx.strokeStyle = theme.wallGlow; ctx.lineWidth = 16; ctx.strokeRect(-ARENA_HALF_W, -ARENA_HALF_H, ARENA_W, ARENA_H);
+  ctx.strokeStyle = theme.wall; ctx.lineWidth = 5; ctx.strokeRect(-ARENA_HALF_W, -ARENA_HALF_H, ARENA_W, ARENA_H);
 
   // ground effects
   for (const gr of g.grounds){
@@ -1939,27 +1941,28 @@ function drawBoss(g, b){
   ctx.restore();
 }
 function drawMinimap(g){
-  const size = 130, pad = 12;
-  const x = canvas.width - size - pad, y = canvas.height - size - pad;
-  const scale = size / ARENA;
+  const mw = 130, pad = 12;
+  const mh = Math.round(mw * ARENA_H / ARENA_W);
+  const x = canvas.width - mw - pad, y = canvas.height - mh - pad;
+  const scale = mw / ARENA_W;
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.fillRect(x, y, size, size);
+  ctx.fillRect(x, y, mw, mh);
   ctx.strokeStyle = 'rgba(255,255,255,0.2)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(x, y, size, size);
-  const px = x + (g.player.x + ARENA_HALF) * scale;
-  const py = y + (g.player.y + ARENA_HALF) * scale;
+  ctx.strokeRect(x, y, mw, mh);
+  const px = x + (g.player.x + ARENA_HALF_W) * scale;
+  const py = y + (g.player.y + ARENA_HALF_H) * scale;
   for (const e of g.enemies){
     ctx.fillStyle = '#ff5a5a';
-    ctx.fillRect(x + (e.x+ARENA_HALF)*scale - 1.5, y + (e.y+ARENA_HALF)*scale - 1.5, 3, 3);
+    ctx.fillRect(x + (e.x+ARENA_HALF_W)*scale - 1.5, y + (e.y+ARENA_HALF_H)*scale - 1.5, 3, 3);
   }
   if (g.boss){
     ctx.fillStyle = '#ff3b8d';
-    ctx.beginPath(); ctx.arc(x + (g.boss.x+ARENA_HALF)*scale, y + (g.boss.y+ARENA_HALF)*scale, 4, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + (g.boss.x+ARENA_HALF_W)*scale, y + (g.boss.y+ARENA_HALF_H)*scale, 4, 0, TAU); ctx.fill();
   }
   for (const t of g.turrets){
     ctx.fillStyle = '#9fd8ff';
-    ctx.fillRect(x + (t.x+ARENA_HALF)*scale - 2, y + (t.y+ARENA_HALF)*scale - 2, 4, 4);
+    ctx.fillRect(x + (t.x+ARENA_HALF_W)*scale - 2, y + (t.y+ARENA_HALF_H)*scale - 2, 4, 4);
   }
   ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(px, py, 3, 0, TAU); ctx.fill();
@@ -1993,14 +1996,14 @@ function loop(t){
       // ambient motes
       for (const m of game.motes){
         m.x += m.vx * dt; m.y += m.vy * dt;
-        if (m.x > ARENA_HALF) m.x = -ARENA_HALF; else if (m.x < -ARENA_HALF) m.x = ARENA_HALF;
-        if (m.y > ARENA_HALF) m.y = -ARENA_HALF; else if (m.y < -ARENA_HALF) m.y = ARENA_HALF;
+        if (m.x > ARENA_HALF_W) m.x = -ARENA_HALF_W; else if (m.x < -ARENA_HALF_W) m.x = ARENA_HALF_W;
+        if (m.y > ARENA_HALF_H) m.y = -ARENA_HALF_H; else if (m.y < -ARENA_HALF_H) m.y = ARENA_HALF_H;
       }
       // rising embers
       for (const m of game.embers){
         m.x += m.vx * dt; m.y += m.vy * dt; m.t += dt;
-        if (m.y < -ARENA_HALF){ m.y = ARENA_HALF; m.x = rand(-ARENA_HALF, ARENA_HALF); }
-        if (m.x > ARENA_HALF) m.x = -ARENA_HALF; else if (m.x < -ARENA_HALF) m.x = ARENA_HALF;
+        if (m.y < -ARENA_HALF_H){ m.y = ARENA_HALF_H; m.x = rand(-ARENA_HALF_W, ARENA_HALF_W); }
+        if (m.x > ARENA_HALF_W) m.x = -ARENA_HALF_W; else if (m.x < -ARENA_HALF_W) m.x = ARENA_HALF_W;
       }
       updateHUD();
     }
