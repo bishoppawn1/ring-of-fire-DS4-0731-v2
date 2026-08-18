@@ -407,7 +407,7 @@ function waveBanner(title, sub){
 }
 
 // ---------- Arena ----------
-const ARENA = 1500;
+const ARENA = 1200;
 const ARENA_HALF = ARENA / 2;
 // World units visible horizontally at the camera (adapts zoom to window size)
 const VIEW_W = 1300;
@@ -681,7 +681,7 @@ function damagePlayer(g, amount){
 }
 
 // ---------- Waves / floors ----------
-function waveCountFor(floor, diff){ return Math.round((4 + floor * 2) * diff.count); }
+function waveCountFor(floor, diff){ return Math.round((7 + floor * 2.5) * diff.count); }
 function enemyHpMult(floor, diff){ return diff.hp * (1 + (floor - 1) * 0.22); }
 function enemyDmgMult(floor, diff){ return diff.dmg * (1 + (floor - 1) * 0.16); }
 function moneyMult(floor, diff){ return diff.money * (1 + (floor - 1) * 0.08); }
@@ -763,14 +763,15 @@ function updateEnemies(g, dt){
     const nx = dx / d, ny = dy / d;
 
     if (def.shield){
-      e.shield = true;
       e.wanderT -= dt;
       if (e.wanderT <= 0){ e.wanderT = rand(1, 2.5); e.dir = rand(0, TAU); }
       let best = null, bd = 1e9;
       for (const o of g.enemies){ if (o !== e && !o.def.shield){ const dd = dist2(e.x,e.y,o.x,o.y); if (dd < bd){ bd = dd; best = o; } } }
       if (best){ const tdx = best.x - e.x, tdy = best.y - e.y; const td = Math.hypot(tdx,tdy)||1; e.vx = lerp(e.vx, tdx/td*e.speed, dt*2); e.vy = lerp(e.vy, tdy/td*e.speed, dt*2); }
       else { e.vx = Math.cos(e.dir)*e.speed; e.vy = Math.sin(e.dir)*e.speed; }
-      for (const o of g.enemies){ if (o !== e && dist2(e.x,e.y,o.x,o.y) < 260*260) o.shield = true; }
+      for (const o of g.enemies){
+        if (o !== e && dist2(e.x,e.y,o.x,o.y) < 260*260){ o.shield = true; o.shieldT = 0.25; }
+      }
       e.x += e.vx*dt; e.y += e.vy*dt;
       continue;
     }
@@ -1329,10 +1330,10 @@ function updateWaveSpawner(g, dt){
   if (!g.waveActive || g.bossActive) return;
   const alive = g.enemies.length;
   const remaining = g.waveEnemiesLeft;
-  if (alive < 10 && remaining > 0){
+  if (alive < 15 && remaining > 0){
     g.spawnTimer -= dt;
     if (g.spawnTimer <= 0){
-      g.spawnTimer = Math.max(0.15, 0.7 - g.floor * 0.03);
+      g.spawnTimer = Math.max(0.12, 0.55 - g.floor * 0.025);
       spawnEnemy(g, pickEnemyDef(g));
       g.waveEnemiesLeft--;
     }
